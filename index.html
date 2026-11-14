@@ -1,0 +1,1259 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#123c72">
+<title>WOLLACE - Daily Payments Manager</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;
+ background:#f1f5fa;
+ color:#172033;
+ font-family:Arial,sans-serif;
+}
+header{
+ background:#123c72;
+ color:white;
+ padding:22px 18px;
+}
+.brand{font-size:25px;font-weight:bold;letter-spacing:1px}
+header p{margin:6px 0 0;font-size:13px;color:#dceaff}
+main{padding:16px;max-width:850px;margin:auto}
+h2{font-size:19px;margin:10px 0 14px}
+.grid{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:12px;
+}
+.card{
+ background:white;
+ padding:16px;
+ border-radius:13px;
+ box-shadow:0 2px 8px #0000000a;
+ margin-bottom:12px;
+}
+.stat-label{font-size:12px;color:#667085}
+.stat-value{font-size:21px;font-weight:bold;margin-top:9px}
+.blue{color:#123c72}
+.green{color:#14834b}
+.orange{color:#c07816}
+.tabs{
+ display:grid;
+ grid-template-columns:repeat(4,1fr);
+ gap:5px;
+ margin:16px 0;
+}
+.tabs button{
+ background:#dfe9f6;
+ color:#123c72;
+ padding:12px 3px;
+ font-size:12px;
+ border:0;
+ border-radius:8px;
+ font-weight:bold;
+}
+.tabs button.active{background:#123c72;color:white}
+.section{display:none}
+.section.active{display:block}
+label{
+ display:block;
+ font-size:13px;
+ font-weight:bold;
+ margin:12px 0 6px;
+}
+input,select{
+ width:100%;
+ padding:13px;
+ border:1px solid #d5dce7;
+ border-radius:8px;
+ background:white;
+ font-size:15px;
+ color:#172033;
+}
+button.primary{
+ background:#123c72;
+ color:white;
+ border:0;
+ padding:13px;
+ border-radius:8px;
+ width:100%;
+ font-size:15px;
+ font-weight:bold;
+ margin-top:15px;
+}
+button.secondary{
+ background:#e6eef9;
+ color:#123c72;
+ border:0;
+ padding:10px;
+ border-radius:8px;
+ font-weight:bold;
+}
+button.danger{
+ background:#fff0f0;
+ color:#b42318;
+ border:0;
+ padding:9px;
+ border-radius:7px;
+}
+.item{
+ padding:13px 0;
+ border-bottom:1px solid #edf0f5;
+}
+.item:last-child{border:0}
+.item-title{font-weight:bold}
+.small{font-size:12px;color:#667085;margin-top:5px}
+.empty{
+ text-align:center;
+ color:#7b8494;
+ padding:25px 8px;
+ font-size:13px;
+}
+.actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.actions button{flex:1}
+footer{
+ text-align:center;
+ color:#7b8494;
+ font-size:12px;
+ padding:25px;
+}
+@media(max-width:380px){
+ .stat-value{font-size:17px}
+ .tabs button{font-size:10px}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+ <div class="brand">WOLLACE</div>
+ <p>DAILY PHONE PAYMENTS MANAGER</p>
+</header>
+
+<main>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="section active">
+ <h2>Today's Overview</h2>
+
+ <div class="grid">
+  <div class="card">
+   <div class="stat-label">Total Customers</div>
+   <div class="stat-value blue" id="totalCustomers">0</div>
+  </div>
+
+  <div class="card">
+   <div class="stat-label">Total Collected</div>
+   <div class="stat-value green" id="totalCollected">KSh 0</div>
+  </div>
+
+  <div class="card">
+   <div class="stat-label">Outstanding Balance</div>
+   <div class="stat-value orange" id="totalBalance">KSh 0</div>
+  </div>
+
+  <div class="card">
+   <div class="stat-label">Today's Collections</div>
+   <div class="stat-value blue" id="todayCollected">KSh 0</div>
+  </div>
+ </div>
+
+ <div class="card">
+  <h2>Recent Payments</h2>
+  <div id="recentPayments" class="empty">
+   No payments recorded yet.
+  </div>
+ </div>
+
+ <div class="card">
+  <h2>Quick Actions</h2>
+  <div class="actions">
+   <button class="secondary" onclick="showTab('customers')">Customers</button>
+   <button class="secondary" onclick="showTab('add')">Add Customer</button>
+  </div>
+  <div class="actions">
+   <button class="secondary" onclick="showTab('payment')">Record Payment</button>
+  </div>
+ </div>
+</div>
+
+<!-- CUSTOMERS -->
+<div id="customers" class="section">
+ <h2>My Customers</h2>
+ <input id="searchCustomer" placeholder="Search customer..." oninput="renderCustomers()">
+ <div class="card" style="margin-top:12px">
+  <div id="customerList" class="empty">No customers registered yet.</div>
+ </div>
+</div>
+
+<!-- ADD CUSTOMER -->
+<div id="add" class="section">
+ <h2>Register New Customer</h2>
+
+ <div class="card">
+  <form id="customerForm">
+
+   <label>Customer Full Name</label>
+   <input id="customerName" required placeholder="Enter full name">
+
+   <label>Phone Number</label>
+   <input id="customerPhone" required type="tel" placeholder="07XXXXXXXX">
+
+   <label>Phone Model</label>
+   <input id="phoneModel" required placeholder="e.g. Tecno Spark 20">
+
+   <label>Total Phone Price (KSh)</label>
+   <input id="phonePrice" required type="number" min="1">
+
+   <label>Deposit Paid (KSh)</label>
+   <input id="deposit" required type="number" min="0" value="0">
+
+   <label>Payment Schedule</label>
+   <select id="frequency">
+    <option value="Daily">Daily</option>
+    <option value="Weekly">Weekly</option>
+    <option value="Monthly">Monthly</option>
+   </select>
+
+   <label>Installment Amount (KSh)</label>
+   <input id="installment" required type="number" min="1">
+
+   <label>First Payment / Start Date</label>
+   <input id="startDate" type="date" required>
+
+   <button class="primary" type="submit">Save Customer</button>
+  </form>
+ </div>
+</div>
+
+<!-- PAYMENTS -->
+<div id="payment" class="section">
+ <h2>Record M-Pesa Payment</h2>
+
+ <div class="card">
+  <form id="paymentForm">
+
+   <label>Select Customer</label>
+   <select id="paymentCustomer" required>
+    <option value="">Choose customer</option>
+   </select>
+
+   <label>Amount Received (KSh)</label>
+   <input id="paymentAmount" type="number" min="1" required>
+
+   <label>M-Pesa Transaction Code</label>
+   <input id="transactionCode" placeholder="e.g. QAB1234567">
+
+   <label>Payment Date</label>
+   <input id="paymentDate" type="date" required>
+
+   <button class="primary" type="submit">Save Payment</button>
+  </form>
+ </div>
+
+ <div class="card">
+  <h2>Payment History</h2>
+  <div id="paymentHistory" class="empty">No payments yet.</div>
+ </div>
+</div>
+
+<!-- REPORTS -->
+<div id="reports" class="section">
+ <h2>Business Reports</h2>
+
+ <div class="card">
+  <div class="stat-label">Total Phone Sales</div>
+  <div class="stat-value blue" id="reportSales">KSh 0</div>
+  <div class="stat-label" style="margin-top:15px">Total Deposits</div>
+  <div class="stat-value green" id="reportDeposits">KSh 0</div>
+  <div class="stat-label" style="margin-top:15px">Total Installment Payments</div>
+  <div class="stat-value green" id="reportPayments">KSh 0</div>
+  <div class="stat-label" style="margin-top:15px">Remaining Balance</div>
+  <div class="stat-value orange" id="reportBalance">KSh 0</div>
+ </div>
+
+ <div class="card">
+  <h2>Data Backup</h2>
+  <p class="small">Download a backup of your customer and payment records.</p>
+  <button class="primary" onclick="backupData()">Download Backup</button>
+  <label>Restore from backup</label>
+  <input type="file" id="restoreFile" accept=".json">
+  <button class="secondary" style="width:100%;margin-top:10px" onclick="restoreData()">Restore Backup</button>
+ </div>
+</div>
+
+<div class="tabs">
+ <button class="active" onclick="showTab('dashboard',this)">Home</button>
+ <button onclick="showTab('customers',this)">Customers</button>
+ <button onclick="showTab('payment',this)">Payments</button>
+ <button onclick="showTab('reports',this)">Reports</button>
+</div>
+
+<footer>WOLLACE © 2026 · Daily Payments Manager</footer>
+</main>
+
+<script>
+const KEY="wollace_data_v1";
+
+let data={customers:[],payments:[]};
+
+try{
+ const saved=localStorage.getItem(KEY);
+ if(saved){
+  const parsed=JSON.parse(saved);
+  if(Array.isArray(parsed.customers)&&Array.isArray(parsed.payments)){
+   data=parsed;
+  }
+ }
+}catch(e){
+ alert("Saved data could not be loaded.");
+}
+
+function save(){
+ localStorage.setItem(KEY,JSON.stringify(data));
+ renderAll();
+}
+
+function money(n){
+ return "KSh "+Number(n||0).toLocaleString("en-KE");
+}
+
+function uid(){
+ return Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+}
+
+function today(){
+ const d=new Date();
+ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+
+document.getElementById("startDate").value=today();
+document.getElementById("paymentDate").value=today();
+
+function showTab(name,btn){
+ document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+ document.getElementById(name).classList.add("active");
+
+ document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
+
+ if(btn)btn.classList.add("active");
+ else{
+  const names=["dashboard","customers","payment","reports"];
+  const index=names.indexOf(name);
+  document.querySelectorAll(".tabs button")[index]?.classList.add("active");
+ }
+
+ renderAll();
+ window.scrollTo(0,0);
+}
+
+function customerPaid(id){
+ const c=data.customers.find(x=>x.id===id);
+ if(!c)return 0;
+ return Number(c.deposit||0)+data.payments
+  .filter(p=>p.customerId===id)
+  .reduce((s,p)=>s+Number(p.amount),0);
+}
+
+function customerBalance(c){
+ return Math.max(0,Number(c.price)-customerPaid(c.id));
+}
+
+document.getElementById("customerForm").addEventListener("submit",function(e){
+ e.preventDefault();
+
+ const name=document.getElementById("customerName").value.trim();
+ const phone=document.getElementById("customerPhone").value.trim();
+ const model=document.getElementById("phoneModel").value.trim();
+ const price=Number(document.getElementById("phonePrice").value);
+ const deposit=Number(document.getElementById("deposit").value);
+ const installment=Number(document.getElementById("installment").value);
+
+ if(!name||!phone||!model||price<=0||deposit<0||deposit>price||installment<=0){
+  alert("Please check all customer details and amounts.");
+  return;
+ }
+
+ const customer={
+  id:uid(),
+  name,phone,model,price,deposit,installment,
+  frequency:document.getElementById("frequency").value,
+  startDate:document.getElementById("startDate").value,
+  created:today()
+ };
+
+ data.customers.push(customer);
+ save();
+ this.reset();
+ document.getElementById("startDate").value=today();
+ document.getElementById("deposit").value="0";
+
+ alert("Customer registered successfully!");
+ showTab("customers");
+});
+
+document.getElementById("paymentForm").addEventListener("submit",function(e){
+ e.preventDefault();
+
+ const id=document.getElementById("paymentCustomer").value;
+ const amount=Number(document.getElementById("paymentAmount").value);
+ const c=data.customers.find(x=>x.id===id);
+
+ if(!c||amount<=0){
+  alert("Select a customer and enter a valid amount.");
+  return;
+ }
+
+ const balance=customerBalance(c);
+
+ if(amount>balance){
+  alert("Payment exceeds the customer's remaining balance of "+money(balance));
+  return;
+ }
+
+ const code=document.getElementById("transactionCode").value.trim();
+
+ if(code&&data.payments.some(p=>p.code.toLowerCase()===code.toLowerCase())){
+  alert("This M-Pesa transaction code has already been recorded.");
+  return;
+ }
+
+ data.payments.push({
+  id:uid(),
+  customerId:id,
+  amount,
+  code:code,
+  date:document.getElementById("paymentDate").value
+ });
+
+ save();
+ this.reset();
+ document.getElementById("paymentDate").value=today();
+
+ alert("Payment recorded successfully!");
+ showTab("payment");
+});
+
+function renderDashboard(){
+ const collected=data.payments.reduce((s,p)=>s+Number(p.amount),0)+
+  data.customers.reduce((s,c)=>s+Number(c.deposit),0);
+
+ const balance=data.customers.reduce((s,c)=>s+customerBalance(c),0);
+
+ const todayPayments=data.payments
+  .filter(p=>p.date===today())
+  .reduce((s,p)=>s+Number(p.amount),0)+
+  data.customers
+  .filter(c=>c.created===today())
+  .reduce((s,c)=>s+Number(c.deposit),0);
+
+ document.getElementById("totalCustomers").textContent=data.customers.length;
+ document.getElementById("totalCollected").textContent=money(collected);
+ document.getElementById("totalBalance").textContent=money(balance);
+ document.getElementById("todayCollected").textContent=money(todayPayments);
+
+ const recent=data.payments.slice().reverse().slice(0,5);
+
+ document.getElementById("recentPayments").innerHTML=
+ recent.length?recent.map(p=>{
+  const c=data.customers.find(x=>x.id===p.customerId);
+  return `<div class="item">
+   <div class="item-title">${esc(c?c.name:"Unknown customer")}</div>
+   <div class="small">${esc(p.date)} · ${esc(p.code||"No transaction code")}</div>
+   <strong class="green">${money(p.amount)}</strong>
+  </div>`;
+ }).join(""):"No payments recorded yet.";
+}
+
+function renderCustomers(){
+ const q=(document.getElementById("searchCustomer")?.value||"").toLowerCase();
+
+ const list=data.customers.filter(c=>
+  c.name.toLowerCase().includes(q)||c.phone.includes(q)
+ );
+
+ document.getElementById("customerList").innerHTML=list.length?
+ list.map(c=>`
+ <div class="item">
+  <div class="item-title">${esc(c.name)}</div>
+  <div class="small">${esc(c.phone)} · ${esc(c.model)}</div>
+  <div class="small">${esc(c.frequency)} · Installment ${money(c.installment)}</div>
+  <div style="margin-top:8px">Phone price: <strong>${money(c.price)}</strong></div>
+  <div>Paid: <strong class="green">${money(customerPaid(c.id))}</strong></div>
+  <div>Balance: <strong class="orange">${money(customerBalance(c))}</strong></div>
+  <div class="actions">
+   <button class="secondary" onclick="customerDetails('${c.id}')">Details</button>
+   <button class="danger" onclick="deleteCustomer('${c.id}')">Delete</button>
+  </div>
+ </div>`).join(""):"No matching customers.";
+}
+
+function renderPaymentOptions(){
+ const select=document.getElementById("paymentCustomer");
+ const old=select.value;
+
+ select.innerHTML='<option value="">Choose customer</option>'+
+ data.customers.filter(c=>customerBalance(c)>0).map(c=>
+ `<option value="${c.id}">${esc(c.name)} - ${money(customerBalance(c))} remaining</option>`
+ ).join("");
+
+ if(data.customers.some(c=>c.id===old&&customerBalance(c)>0))select.value=old;
+}
+
+function renderHistory(){
+ const list=data.payments.slice().reverse();
+
+ document.getElementById("paymentHistory").innerHTML=list.length?
+ list.map(p=>{
+  const c=data.customers.find(x=>x.id===p.customerId);
+  return `<div class="item">
+   <div class="item-title">${esc(c?c.name:"Unknown customer")}</div>
+   <div class="small">${esc(p.date)} · ${esc(p.code||"No transaction code")}</div>
+   <strong class="green">${money(p.amount)}</strong>
+   <button class="danger" style="float:right" onclick="deletePayment('${p.id}')">Delete</button>
+   <div style="clear:both"></div>
+  </div>`;
+ }).join(""):"No payments recorded yet.";
+}
+
+function renderReports(){
+ const sales=data.customers.reduce((s,c)=>s+Number(c.price),0);
+ const deposits=data.customers.reduce((s,c)=>s+Number(c.deposit),0);
+ const payments=data.payments.reduce((s,p)=>s+Number(p.amount),0);
+ const balance=data.customers.reduce((s,c)=>s+customerBalance(c),0);
+
+ document.getElementById("reportSales").textContent=money(sales);
+ document.getElementById("reportDeposits").textContent=money(deposits);
+ document.getElementById("reportPayments").textContent=money(payments);
+ document.getElementById("reportBalance").textContent=money(balance);
+}
+
+function renderAll(){
+ renderDashboard();
+ renderCustomers();
+ renderPaymentOptions();
+ renderHistory();
+ renderReports();
+}
+
+function customerDetails(id){
+ const c=data.customers.find(x=>x.id===id);
+ if(!c)return;
+
+ const history=data.payments.filter(p=>p.customerId===id);
+
+ alert(
+ "CUSTOMER DETAILS\n\n"+
+ "Name: "+c.name+
+ "\nPhone: "+c.phone+
+ "\nDevice: "+c.model+
+ "\nSchedule: "+c.frequency+
+ "\nInstallment: "+money(c.installment)+
+ "\nStart date: "+c.startDate+
+ "\n\nPrice: "+money(c.price)+
+ "\nPaid: "+money(customerPaid(id))+
+ "\nBalance: "+money(customerBalance(c))+
+ "\n\nPayment records: "+history.length
+ );
+}
+
+function deleteCustomer(id){
+ const c=data.customers.find(x=>x.id===id);
+ if(!c)return;
+
+ if(!confirm("Delete "+c.name+" and all their payment records?"))return;
+
+ data.customers=data.customers.filter(x=>x.id!==id);
+ data.payments=data.payments.filter(x=>x.customerId!==id);
+ save();
+}
+
+function deletePayment(id){
+ if(!confirm("Delete this payment record?"))return;
+ data.payments=data.payments.filter(p=>p.id!==id);
+ save();
+}
+
+function esc(value){
+ return String(value??"").replace(/[&<>"']/g,c=>({
+ "&":"&amp;","<":"&lt;",">":"&gt;",
+ '"':"&quot;","'":"&#39;"
+ })[c]);
+}
+
+function backupData(){
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement("a");
+ a.href=url;
+ a.download="WOLLACE-backup.json";
+ a.click();
+ URL.revokeObjectURL(url);
+}
+
+function restoreData(){
+ const file=document.getElementById("restoreFile").files[0];
+ if(!file){alert("Choose a backup file first.");return;}
+
+ const reader=new FileReader();
+
+ reader.onload=function(){
+  try{
+   const restored=JSON.parse(reader.result);
+
+   if(!Array.isArray(restored.customers)||!Array.isArray(restored.payments)){
+    throw new Error("Invalid backup");
+   }
+
+   if(!confirm("Replace your current data with this backup?"))return;
+
+   data=restored;
+   save();
+   alert("Backup restored successfully!");
+  }catch(e){
+   alert("This backup file is invalid.");
+  }
+ };
+
+ reader.readAsText(file);
+}
+
+renderAll();
+</script>
+</body>
+  </html>
+
+  
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#123c72">
+<title>WOLLACE - Daily Payments Manager</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;
+ background:#f1f5fa;
+ color:#172033;
+ font-family:Arial,sans-serif;
+}
+header{
+ background:#123c72;
+ color:white;
+ padding:22px 18px;
+}
+.brand{font-size:25px;font-weight:bold;letter-spacing:1px}
+header p{margin:6px 0 0;font-size:13px;color:#dceaff}
+main{padding:16px;max-width:850px;margin:auto}
+h2{font-size:19px;margin:10px 0 14px}
+.grid{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:12px;
+}
+.card{
+ background:white;
+ padding:16px;
+ border-radius:13px;
+ box-shadow:0 2px 8px #0000000a;
+ margin-bottom:12px;
+}
+.stat-label{font-size:12px;color:#667085}
+.stat-value{font-size:21px;font-weight:bold;margin-top:9px}
+.blue{color:#123c72}
+.green{color:#14834b}
+.orange{color:#c07816}
+.tabs{
+ display:grid;
+ grid-template-columns:repeat(4,1fr);
+ gap:5px;
+ margin:16px 0;
+}
+.tabs button{
+ background:#dfe9f6;
+ color:#123c72;
+ padding:12px 3px;
+ font-size:12px;
+ border:0;
+ border-radius:8px;
+ font-weight:bold;
+}
+.tabs button.active{background:#123c72;color:white}
+.section{display:none}
+.section.active{display:block}
+label{
+ display:block;
+ font-size:13px;
+ font-weight:bold;
+ margin:12px 0 6px;
+}
+input,select{
+ width:100%;
+ padding:13px;
+ border:1px solid #d5dce7;
+ border-radius:8px;
+ background:white;
+ font-size:15px;
+ color:#172033;
+}
+button.primary{
+ background:#123c72;
+ color:white;
+ border:0;
+ padding:13px;
+ border-radius:8px;
+ width:100%;
+ font-size:15px;
+ font-weight:bold;
+ margin-top:15px;
+}
+button.secondary{
+ background:#e6eef9;
+ color:#123c72;
+ border:0;
+ padding:10px;
+ border-radius:8px;
+ font-weight:bold;
+}
+button.danger{
+ background:#fff0f0;
+ color:#b42318;
+ border:0;
+ padding:9px;
+ border-radius:7px;
+}
+.item{
+ padding:13px 0;
+ border-bottom:1px solid #edf0f5;
+}
+.item:last-child{border:0}
+.item-title{font-weight:bold}
+.small{font-size:12px;color:#667085;margin-top:5px}
+.empty{
+ text-align:center;
+ color:#7b8494;
+ padding:25px 8px;
+ font-size:13px;
+}
+.actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.actions button{flex:1}
+footer{
+ text-align:center;
+ color:#7b8494;
+ font-size:12px;
+ padding:25px;
+}
+@media(max-width:380px){
+ .stat-value{font-size:17px}
+ .tabs button{font-size:10px}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+ <div class="brand">WOLLACE</div>
+ <p>DAILY PHONE PAYMENTS MANAGER</p>
+</header>
+
+<main>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="section active">
+ <h2>Today's Overview</h2>
+
+ <div class="grid">
+  <div class="card">
+   <div class="stat-label">Total Customers</div>
+   <div class="stat-value blue" id="totalCustomers">0</div>
+  </div>
+
+  <div class="card">
+   <div class="stat-label">Total Collected</div>
+   <div class="stat-value green" id="totalCollected">KSh 0</div>
+  </div>
+
+  <div class="card">
+   <div class="stat-label">Outstanding Balance</div>
+   <div class="stat-value orange" id="totalBalance">KSh 0</div>
+  </div>
+
+  <div class="card">
+   <div class="stat-label">Today's Collections</div>
+   <div class="stat-value blue" id="todayCollected">KSh 0</div>
+  </div>
+ </div>
+
+ <div class="card">
+  <h2>Recent Payments</h2>
+  <div id="recentPayments" class="empty">
+   No payments recorded yet.
+  </div>
+ </div>
+
+ <div class="card">
+  <h2>Quick Actions</h2>
+  <div class="actions">
+   <button class="secondary" onclick="showTab('customers')">Customers</button>
+   <button class="secondary" onclick="showTab('add')">Add Customer</button>
+  </div>
+  <div class="actions">
+   <button class="secondary" onclick="showTab('payment')">Record Payment</button>
+  </div>
+ </div>
+</div>
+
+<!-- CUSTOMERS -->
+<div id="customers" class="section">
+ <h2>My Customers</h2>
+ <input id="searchCustomer" placeholder="Search customer..." oninput="renderCustomers()">
+ <div class="card" style="margin-top:12px">
+  <div id="customerList" class="empty">No customers registered yet.</div>
+ </div>
+</div>
+
+<!-- ADD CUSTOMER -->
+<div id="add" class="section">
+ <h2>Register New Customer</h2>
+
+ <div class="card">
+  <form id="customerForm">
+
+   <label>Customer Full Name</label>
+   <input id="customerName" required placeholder="Enter full name">
+
+   <label>Phone Number</label>
+   <input id="customerPhone" required type="tel" placeholder="07XXXXXXXX">
+
+   <label>Phone Model</label>
+   <input id="phoneModel" required placeholder="e.g. Tecno Spark 20">
+
+   <label>Total Phone Price (KSh)</label>
+   <input id="phonePrice" required type="number" min="1">
+
+   <label>Deposit Paid (KSh)</label>
+   <input id="deposit" required type="number" min="0" value="0">
+
+   <label>Payment Schedule</label>
+   <select id="frequency">
+    <option value="Daily">Daily</option>
+    <option value="Weekly">Weekly</option>
+    <option value="Monthly">Monthly</option>
+   </select>
+
+   <label>Installment Amount (KSh)</label>
+   <input id="installment" required type="number" min="1">
+
+   <label>First Payment / Start Date</label>
+   <input id="startDate" type="date" required>
+
+   <button class="primary" type="submit">Save Customer</button>
+  </form>
+ </div>
+</div>
+
+<!-- PAYMENTS -->
+<div id="payment" class="section">
+ <h2>Record M-Pesa Payment</h2>
+
+ <div class="card">
+  <form id="paymentForm">
+
+   <label>Select Customer</label>
+   <select id="paymentCustomer" required>
+    <option value="">Choose customer</option>
+   </select>
+
+   <label>Amount Received (KSh)</label>
+   <input id="paymentAmount" type="number" min="1" required>
+
+   <label>M-Pesa Transaction Code</label>
+   <input id="transactionCode" placeholder="e.g. QAB1234567">
+
+   <label>Payment Date</label>
+   <input id="paymentDate" type="date" required>
+
+   <button class="primary" type="submit">Save Payment</button>
+  </form>
+ </div>
+
+ <div class="card">
+  <h2>Payment History</h2>
+  <div id="paymentHistory" class="empty">No payments yet.</div>
+ </div>
+</div>
+
+<!-- REPORTS -->
+<div id="reports" class="section">
+ <h2>Business Reports</h2>
+
+ <div class="card">
+  <div class="stat-label">Total Phone Sales</div>
+  <div class="stat-value blue" id="reportSales">KSh 0</div>
+  <div class="stat-label" style="margin-top:15px">Total Deposits</div>
+  <div class="stat-value green" id="reportDeposits">KSh 0</div>
+  <div class="stat-label" style="margin-top:15px">Total Installment Payments</div>
+  <div class="stat-value green" id="reportPayments">KSh 0</div>
+  <div class="stat-label" style="margin-top:15px">Remaining Balance</div>
+  <div class="stat-value orange" id="reportBalance">KSh 0</div>
+ </div>
+
+ <div class="card">
+  <h2>Data Backup</h2>
+  <p class="small">Download a backup of your customer and payment records.</p>
+  <button class="primary" onclick="backupData()">Download Backup</button>
+  <label>Restore from backup</label>
+  <input type="file" id="restoreFile" accept=".json">
+  <button class="secondary" style="width:100%;margin-top:10px" onclick="restoreData()">Restore Backup</button>
+ </div>
+</div>
+
+<div class="tabs">
+ <button class="active" onclick="showTab('dashboard',this)">Home</button>
+ <button onclick="showTab('customers',this)">Customers</button>
+ <button onclick="showTab('payment',this)">Payments</button>
+ <button onclick="showTab('reports',this)">Reports</button>
+</div>
+
+<footer>WOLLACE © 2026 · Daily Payments Manager</footer>
+</main>
+
+<script>
+const KEY="wollace_data_v1";
+
+let data={customers:[],payments:[]};
+
+try{
+ const saved=localStorage.getItem(KEY);
+ if(saved){
+  const parsed=JSON.parse(saved);
+  if(Array.isArray(parsed.customers)&&Array.isArray(parsed.payments)){
+   data=parsed;
+  }
+ }
+}catch(e){
+ alert("Saved data could not be loaded.");
+}
+
+function save(){
+ localStorage.setItem(KEY,JSON.stringify(data));
+ renderAll();
+}
+
+function money(n){
+ return "KSh "+Number(n||0).toLocaleString("en-KE");
+}
+
+function uid(){
+ return Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+}
+
+function today(){
+ const d=new Date();
+ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+
+document.getElementById("startDate").value=today();
+document.getElementById("paymentDate").value=today();
+
+function showTab(name,btn){
+ document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+ document.getElementById(name).classList.add("active");
+
+ document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
+
+ if(btn)btn.classList.add("active");
+ else{
+  const names=["dashboard","customers","payment","reports"];
+  const index=names.indexOf(name);
+  document.querySelectorAll(".tabs button")[index]?.classList.add("active");
+ }
+
+ renderAll();
+ window.scrollTo(0,0);
+}
+
+function customerPaid(id){
+ const c=data.customers.find(x=>x.id===id);
+ if(!c)return 0;
+ return Number(c.deposit||0)+data.payments
+  .filter(p=>p.customerId===id)
+  .reduce((s,p)=>s+Number(p.amount),0);
+}
+
+function customerBalance(c){
+ return Math.max(0,Number(c.price)-customerPaid(c.id));
+}
+
+document.getElementById("customerForm").addEventListener("submit",function(e){
+ e.preventDefault();
+
+ const name=document.getElementById("customerName").value.trim();
+ const phone=document.getElementById("customerPhone").value.trim();
+ const model=document.getElementById("phoneModel").value.trim();
+ const price=Number(document.getElementById("phonePrice").value);
+ const deposit=Number(document.getElementById("deposit").value);
+ const installment=Number(document.getElementById("installment").value);
+
+ if(!name||!phone||!model||price<=0||deposit<0||deposit>price||installment<=0){
+  alert("Please check all customer details and amounts.");
+  return;
+ }
+
+ const customer={
+  id:uid(),
+  name,phone,model,price,deposit,installment,
+  frequency:document.getElementById("frequency").value,
+  startDate:document.getElementById("startDate").value,
+  created:today()
+ };
+
+ data.customers.push(customer);
+ save();
+ this.reset();
+ document.getElementById("startDate").value=today();
+ document.getElementById("deposit").value="0";
+
+ alert("Customer registered successfully!");
+ showTab("customers");
+});
+
+document.getElementById("paymentForm").addEventListener("submit",function(e){
+ e.preventDefault();
+
+ const id=document.getElementById("paymentCustomer").value;
+ const amount=Number(document.getElementById("paymentAmount").value);
+ const c=data.customers.find(x=>x.id===id);
+
+ if(!c||amount<=0){
+  alert("Select a customer and enter a valid amount.");
+  return;
+ }
+
+ const balance=customerBalance(c);
+
+ if(amount>balance){
+  alert("Payment exceeds the customer's remaining balance of "+money(balance));
+  return;
+ }
+
+ const code=document.getElementById("transactionCode").value.trim();
+
+ if(code&&data.payments.some(p=>p.code.toLowerCase()===code.toLowerCase())){
+  alert("This M-Pesa transaction code has already been recorded.");
+  return;
+ }
+
+ data.payments.push({
+  id:uid(),
+  customerId:id,
+  amount,
+  code:code,
+  date:document.getElementById("paymentDate").value
+ });
+
+ save();
+ this.reset();
+ document.getElementById("paymentDate").value=today();
+
+ alert("Payment recorded successfully!");
+ showTab("payment");
+});
+
+function renderDashboard(){
+ const collected=data.payments.reduce((s,p)=>s+Number(p.amount),0)+
+  data.customers.reduce((s,c)=>s+Number(c.deposit),0);
+
+ const balance=data.customers.reduce((s,c)=>s+customerBalance(c),0);
+
+ const todayPayments=data.payments
+  .filter(p=>p.date===today())
+  .reduce((s,p)=>s+Number(p.amount),0)+
+  data.customers
+  .filter(c=>c.created===today())
+  .reduce((s,c)=>s+Number(c.deposit),0);
+
+ document.getElementById("totalCustomers").textContent=data.customers.length;
+ document.getElementById("totalCollected").textContent=money(collected);
+ document.getElementById("totalBalance").textContent=money(balance);
+ document.getElementById("todayCollected").textContent=money(todayPayments);
+
+ const recent=data.payments.slice().reverse().slice(0,5);
+
+ document.getElementById("recentPayments").innerHTML=
+ recent.length?recent.map(p=>{
+  const c=data.customers.find(x=>x.id===p.customerId);
+  return `<div class="item">
+   <div class="item-title">${esc(c?c.name:"Unknown customer")}</div>
+   <div class="small">${esc(p.date)} · ${esc(p.code||"No transaction code")}</div>
+   <strong class="green">${money(p.amount)}</strong>
+  </div>`;
+ }).join(""):"No payments recorded yet.";
+}
+
+function renderCustomers(){
+ const q=(document.getElementById("searchCustomer")?.value||"").toLowerCase();
+
+ const list=data.customers.filter(c=>
+  c.name.toLowerCase().includes(q)||c.phone.includes(q)
+ );
+
+ document.getElementById("customerList").innerHTML=list.length?
+ list.map(c=>`
+ <div class="item">
+  <div class="item-title">${esc(c.name)}</div>
+  <div class="small">${esc(c.phone)} · ${esc(c.model)}</div>
+  <div class="small">${esc(c.frequency)} · Installment ${money(c.installment)}</div>
+  <div style="margin-top:8px">Phone price: <strong>${money(c.price)}</strong></div>
+  <div>Paid: <strong class="green">${money(customerPaid(c.id))}</strong></div>
+  <div>Balance: <strong class="orange">${money(customerBalance(c))}</strong></div>
+  <div class="actions">
+   <button class="secondary" onclick="customerDetails('${c.id}')">Details</button>
+   <button class="danger" onclick="deleteCustomer('${c.id}')">Delete</button>
+  </div>
+ </div>`).join(""):"No matching customers.";
+}
+
+function renderPaymentOptions(){
+ const select=document.getElementById("paymentCustomer");
+ const old=select.value;
+
+ select.innerHTML='<option value="">Choose customer</option>'+
+ data.customers.filter(c=>customerBalance(c)>0).map(c=>
+ `<option value="${c.id}">${esc(c.name)} - ${money(customerBalance(c))} remaining</option>`
+ ).join("");
+
+ if(data.customers.some(c=>c.id===old&&customerBalance(c)>0))select.value=old;
+}
+
+function renderHistory(){
+ const list=data.payments.slice().reverse();
+
+ document.getElementById("paymentHistory").innerHTML=list.length?
+ list.map(p=>{
+  const c=data.customers.find(x=>x.id===p.customerId);
+  return `<div class="item">
+   <div class="item-title">${esc(c?c.name:"Unknown customer")}</div>
+   <div class="small">${esc(p.date)} · ${esc(p.code||"No transaction code")}</div>
+   <strong class="green">${money(p.amount)}</strong>
+   <button class="danger" style="float:right" onclick="deletePayment('${p.id}')">Delete</button>
+   <div style="clear:both"></div>
+  </div>`;
+ }).join(""):"No payments recorded yet.";
+}
+
+function renderReports(){
+ const sales=data.customers.reduce((s,c)=>s+Number(c.price),0);
+ const deposits=data.customers.reduce((s,c)=>s+Number(c.deposit),0);
+ const payments=data.payments.reduce((s,p)=>s+Number(p.amount),0);
+ const balance=data.customers.reduce((s,c)=>s+customerBalance(c),0);
+
+ document.getElementById("reportSales").textContent=money(sales);
+ document.getElementById("reportDeposits").textContent=money(deposits);
+ document.getElementById("reportPayments").textContent=money(payments);
+ document.getElementById("reportBalance").textContent=money(balance);
+}
+
+function renderAll(){
+ renderDashboard();
+ renderCustomers();
+ renderPaymentOptions();
+ renderHistory();
+ renderReports();
+}
+
+function customerDetails(id){
+ const c=data.customers.find(x=>x.id===id);
+ if(!c)return;
+
+ const history=data.payments.filter(p=>p.customerId===id);
+
+ alert(
+ "CUSTOMER DETAILS\n\n"+
+ "Name: "+c.name+
+ "\nPhone: "+c.phone+
+ "\nDevice: "+c.model+
+ "\nSchedule: "+c.frequency+
+ "\nInstallment: "+money(c.installment)+
+ "\nStart date: "+c.startDate+
+ "\n\nPrice: "+money(c.price)+
+ "\nPaid: "+money(customerPaid(id))+
+ "\nBalance: "+money(customerBalance(c))+
+ "\n\nPayment records: "+history.length
+ );
+}
+
+function deleteCustomer(id){
+ const c=data.customers.find(x=>x.id===id);
+ if(!c)return;
+
+ if(!confirm("Delete "+c.name+" and all their payment records?"))return;
+
+ data.customers=data.customers.filter(x=>x.id!==id);
+ data.payments=data.payments.filter(x=>x.customerId!==id);
+ save();
+}
+
+function deletePayment(id){
+ if(!confirm("Delete this payment record?"))return;
+ data.payments=data.payments.filter(p=>p.id!==id);
+ save();
+}
+
+function esc(value){
+ return String(value??"").replace(/[&<>"']/g,c=>({
+ "&":"&amp;","<":"&lt;",">":"&gt;",
+ '"':"&quot;","'":"&#39;"
+ })[c]);
+}
+
+function backupData(){
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement("a");
+ a.href=url;
+ a.download="WOLLACE-backup.json";
+ a.click();
+ URL.revokeObjectURL(url);
+}
+
+function restoreData(){
+ const file=document.getElementById("restoreFile").files[0];
+ if(!file){alert("Choose a backup file first.");return;}
+
+ const reader=new FileReader();
+
+ reader.onload=function(){
+  try{
+   const restored=JSON.parse(reader.result);
+
+   if(!Array.isArray(restored.customers)||!Array.isArray(restored.payments)){
+    throw new Error("Invalid backup");
+   }
+
+   if(!confirm("Replace your current data with this backup?"))return;
+
+   data=restored;
+   save();
+   alert("Backup restored successfully!");
+  }catch(e){
+   alert("This backup file is invalid.");
+  }
+ };
+
+ reader.readAsText(file);
+}
+
+renderAll();
+</script>
+</body>
+</html>
