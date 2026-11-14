@@ -1,8 +1,7 @@
-
 {
   "name": "WOLLACE Daily Payments Manager",
   "short_name": "WOLLACE",
-  "description": "Phone installment management",
+  "description": "Phone installment and daily payment management",
   "start_url": "/Wollace/",
   "scope": "/Wollace/",
   "display": "standalone",
@@ -11,14 +10,10 @@
   "theme_color": "#123c72",
   "icons": [
     {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }
