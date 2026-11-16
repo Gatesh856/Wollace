@@ -462,12 +462,152 @@ data.payments.push({
 
  save();
  this.reset();
- document.getElementById("paymentDate").value=today();
-
- alert("Payment recorded successfully!");
- showTab("payment");
+ 
+document.getElementById("paymentForm").addEventListener("submit", function(e) {
+  e.preventDefault();
 });
 
+document.getElementById("paymentCustomer").addEventListener("change", function() {
+  const customer = data.customers.find(c => c.id === this.value);
+
+  if (customer) {
+    document.getElementById("mpesaPhone").value = customer.phone || "";
+  }
+});
+
+async function sendMpesaPrompt() {
+  const button = document.getElementById("stkButton");
+  const status = document.getElementById("mpesaStatus");
+
+  const customerId = document.getElementById("paymentCustomer").value;
+  const customer = data.customers.find(c => c.id === customerId);
+  const amount = Number(document.getElementById("paymentAmount").value);
+  const date = document.getElementById("paymentDate").value;
+
+  let phone = document.getElementById("mpesaPhone").value.trim().replace(/\s/g, "");
+
+  if (phone.startsWith("07") && phone.length === 10) {
+    phone = "254" + phone.substring(1);
+  }
+
+  if (!customer || !Number.isInteger(amount) || amount < 1 || !date) {
+    status.textContent = "Please select a customer and enter a valid amount and date.";
+    return;
+  }
+
+  if (amount > customerBalance(customer)) {
+    status.textContent = "Amount exceeds the remaining balance of " + money(customerBalance(customer));
+    return;
+  }
+
+  if (!/^2547\d{8}$/.test(phone)) {
+    status.textContent = "Enter a valid Safaricom number, for example 0712345678.";
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Sending prompt...";
+  status.textContent = "Connecting to M-Pesa...";
+
+  try {
+    const response = await fetch("https://wollace.onrender.com/api/mpesa/stkpush", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        phoneNumber: phone,
+        amount: amount,
+        accountReference: customer.name.slice(0, 12)
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || String(result.ResponseCode) !== "0" || !result.CheckoutRequestID) {
+      throw new Error(result.error || result.errorMessage || "M-Pesa prompt could not be sent.");
+    }
+
+    const checkoutID = result.CheckoutRequestID;
+
+    button.textContent = "Waiting for payment...";
+    status.textContent = "M-Pesa prompt sent to " + phone +
+      ". Ask the customer to enter their M-Pesa PIN. Waiting for Safaricom confirmation...";
+
+    let confirmed = false;
+
+    for (let attempt = 0; attempt < 30; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      const check = await fetch(
+        "https://wollace.onrender.com/api/mpesa/status?checkoutRequestID=" +
+        encodeURIComponent(checkoutID)
+      );
+
+      if (!check.ok) {
+        continue;
+      }
+
+      const payment = await check.json();
+
+      if (payment.status === "failed") {
+        status.textContent = "Payment was not completed: " +
+          (payment.resultDescription || "Safaricom reported a failed payment.");
+        break;
+      }
+
+      if (payment.status === "successful") {
+        const paidAmount = Number(payment.amount);
+
+        if (!payment.receipt || paidAmount !== amount) {
+          status.textContent = "Safaricom returned a payment result, but the receipt or amount could not be verified. Please check before recording.";
+          break;
+        }
+
+        if (data.payments.some(p => p.code === payment.receipt)) {
+          status.textContent = "This M-Pesa receipt has already been recorded.";
+          break;
+        }
+
+        if (paidAmount > customerBalance(customer)) {
+          status.textContent = "Payment confirmed, but it exceeds the customer's remaining balance. Please review the payment.";
+          break;
+        }
+
+        data.payments.push({
+          id: uid(),
+          customerId: customerId,
+          amount: paidAmount,
+          method: "M-Pesa Express",
+          code: payment.receipt,
+          date: date
+        });
+
+        save();
+
+        status.textContent = "Payment confirmed successfully! Receipt: " + payment.receipt;
+        confirmed = true;
+        break;
+      }
+
+      status.textContent = "Waiting for Safaricom confirmation...";
+    }
+
+    if (!confirmed && !status.textContent.startsWith("Payment was not completed") &&
+        !status.textContent.startsWith("Safaricom returned") &&
+        !status.textContent.startsWith("This M-Pesa receipt") &&
+        !status.textContent.startsWith("Payment confirmed, but")) {
+      status.textContent = "No confirmation received yet. Check the payment status before trying again. Do not send another prompt immediately.";
+    }
+
+  } catch (error) {
+    status.textContent = "Error: " + error.message;
+  } finally {
+    button.disabled = false;
+    button.textContent = "Send M-Pesa Prompt";
+  }
+     }
+ 
 function renderDashboard(){
  const collected=data.payments.reduce((s,p)=>s+Number(p.amount),0)+
   data.customers.reduce((s,c)=>s+Number(c.deposit),0);
