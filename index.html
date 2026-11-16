@@ -531,7 +531,7 @@ function renderHistory(){
   const c=data.customers.find(x=>x.id===p.customerId);
   return `<div class="item">
    <div class="item-title">${esc(c?c.name:"Unknown customer")}</div>
-   <div class="small">${esc(p.date)} · ${esc(p.code||"No transaction code")}</div>
+   <div class="small">${esc(p.date)} · ${esc(p.method||"M-Pesa")} · ${esc(p.code||"No transaction code")}</div>
    <strong class="green">${money(p.amount)}</strong>
    <button class="danger" style="float:right" onclick="deletePayment('${p.id}')">Delete</button>
    <div style="clear:both"></div>
