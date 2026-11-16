@@ -260,8 +260,13 @@ footer{
    <label>Amount Received (KSh)</label>
    <input id="paymentAmount" type="number" min="1" required>
 
-   <label>M-Pesa Transaction Code</label>
-   <input id="transactionCode" placeholder="e.g. QAB1234567">
+   <label>Payment Method</label>
+<select id="paymentMethod" required>
+  <option value="M-Pesa" selected>M-Pesa</option>
+</select>
+
+<label>M-Pesa Transaction Code</label>
+<input id="transactionCode" placeholder="e.g. QAB1234567">
 
    <label>Payment Date</label>
    <input id="paymentDate" type="date" required>
