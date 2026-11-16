@@ -1,4 +1,3 @@
-
 const express = require("express");
 const cors = require("cors");
 
@@ -8,8 +7,12 @@ app.use(express.json());
 app.use(cors());
 
 const PORT = process.env.PORT || 3000;
-
 const BASE_URL = "https://sandbox.safaricom.co.ke";
+
+// Temporary payment storage for testing.
+// This is cleared when the server restarts.
+const payments = new Map();
+const earlyCallbacks = new Map();
 
 function getTimestamp() {
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -23,7 +26,9 @@ function getTimestamp() {
     hourCycle: "h23"
   }).formatToParts(new Date());
 
-  const p = Object.fromEntries(parts.map(x => [x.type, x.value]));
+  const p = Object.fromEntries(
+    parts.map(x => [x.type, x.value])
+  );
 
   return p.year + p.month + p.day +
     p.hour + p.minute + p.second;
@@ -57,24 +62,38 @@ app.get("/", (req, res) => {
 });
 
 app.get("/health", (req, res) => {
-  res.json({ status: "online", service: "WOLLACE" });
+  res.json({
+    status: "online",
+    service: "WOLLACE"
+  });
 });
 
-// Initiate M-Pesa STK Push
+// Send M-Pesa STK Push
 app.post("/api/mpesa/stkpush", async (req, res) => {
   try {
-    const { phoneNumber, amount, accountReference } = req.body;
+    const {
+      phoneNumber,
+      amount,
+      accountReference
+    } = req.body;
 
-    const phone = String(phoneNumber || "").replace(/\s/g, "");
-    const value = Number(amount);
+    let phone = String(phoneNumber || "")
+      .replace(/\s/g, "");
+
+    if (phone.startsWith("07") && phone.length === 10) {
+      phone = "254" + phone.substring(1);
+    }
 
     if (!/^2547\d{8}$/.test(phone)) {
       return res.status(400).json({
-        error: "Enter a valid Kenyan Safaricom number in 254 format."
+        error: "Enter a valid Kenyan Safaricom number."
       });
     }
 
-    if (!Number.isInteger(value) || value < 1 || value > 250000) {
+    const value = Number(amount);
+
+    if (!Number.isInteger(value) ||
+        value < 1 || value > 250000) {
       return res.status(400).json({
         error: "Enter a valid payment amount."
       });
@@ -113,7 +132,9 @@ app.post("/api/mpesa/stkpush", async (req, res) => {
           PartyB: shortcode,
           PhoneNumber: phone,
           CallBackURL: callbackURL,
-          AccountReference: String(accountReference || "WOLLACE").slice(0, 12),
+          AccountReference: String(
+            accountReference || "WOLLACE"
+          ).slice(0, 12),
           TransactionDesc: "WOLLACE Payment"
         })
       }
@@ -121,37 +142,147 @@ app.post("/api/mpesa/stkpush", async (req, res) => {
 
     const data = await response.json();
 
-    if (!response.ok) {
-      return res.status(response.status).json(data);
+    if (!response.ok || String(data.ResponseCode) !== "0") {
+      return res.status(response.ok ? 400 : response.status)
+        .json(data);
     }
 
-    res.json(data);
+    const checkoutID = data.CheckoutRequestID;
+
+    if (checkoutID) {
+      const early = earlyCallbacks.get(checkoutID);
+
+      payments.set(checkoutID, early || {
+        status: "pending",
+        amount: value,
+        phoneNumber: phone,
+        accountReference: accountReference || "WOLLACE",
+        checkoutRequestID: checkoutID
+      });
+
+      earlyCallbacks.delete(checkoutID);
+    }
+
+    res.json({
+      ...data,
+      paymentStatus: "pending",
+      message: "M-Pesa prompt sent. Waiting for confirmation."
+    });
 
   } catch (error) {
     console.error("STK Push error:", error.message);
+
     res.status(500).json({
       error: "Unable to initiate M-Pesa payment."
     });
   }
 });
 
-// Receive Safaricom payment callback
+// Receive Safaricom payment confirmation
 app.post("/api/mpesa/callback", (req, res) => {
-  console.log(
-    "WOLLACE M-Pesa Callback:",
-    JSON.stringify(req.body)
+  try {
+    console.log(
+      "WOLLACE M-Pesa Callback:",
+      JSON.stringify(req.body)
+    );
+
+    const callback = req.body?.Body?.stkCallback;
+
+    if (!callback || !callback.CheckoutRequestID) {
+      return res.json({
+        ResultCode: 0,
+        ResultDesc: "Accepted"
+      });
+    }
+
+    const checkoutID = callback.CheckoutRequestID;
+    const resultCode = Number(callback.ResultCode);
+
+    let receipt = null;
+    let paidAmount = null;
+    let phoneNumber = null;
+
+    const items =
+      callback.CallbackMetadata?.Item || [];
+
+    for (const item of items) {
+      if (item.Name === "MpesaReceiptNumber") {
+        receipt = item.Value;
+      }
+
+      if (item.Name === "Amount") {
+        paidAmount = item.Value;
+      }
+
+      if (item.Name === "PhoneNumber") {
+        phoneNumber = item.Value;
+      }
+    }
+
+    const payment = {
+      checkoutRequestID: checkoutID,
+      status: resultCode === 0 ? "successful" : "failed",
+      resultCode,
+      resultDescription: callback.ResultDesc,
+      receipt,
+      amount: paidAmount,
+      phoneNumber,
+      completedAt: new Date().toISOString()
+    };
+
+    if (payments.has(checkoutID)) {
+      payments.set(checkoutID, {
+        ...payments.get(checkoutID),
+        ...payment
+      });
+    } else {
+      earlyCallbacks.set(checkoutID, payment);
+    }
+
+    console.log("Payment result:", payment);
+
+    res.json({
+      ResultCode: 0,
+      ResultDesc: "Accepted"
+    });
+
+  } catch (error) {
+    console.error("Callback error:", error.message);
+
+    res.json({
+      ResultCode: 0,
+      ResultDesc: "Accepted"
+    });
+  }
+});
+
+// Check payment status
+app.get("/api/mpesa/status", (req, res) => {
+  const checkoutID = String(
+    req.query.checkoutRequestID || ""
   );
 
-  // Payment results must be verified and saved
-  // before marking an installment as paid.
+  if (!checkoutID) {
+    return res.status(400).json({
+      error: "CheckoutRequestID is required."
+    });
+  }
 
-  res.json({
-    ResultCode: 0,
-    ResultDesc: "Accepted"
-  });
+  const payment = payments.get(checkoutID);
+
+  if (!payment) {
+    return res.json({
+      status: "unknown",
+      message: "Payment status not yet available."
+    });
+  }
+
+  res.json(payment);
 });
 
 app.listen(PORT, () => {
-  console.log(`WOLLACE server running on port ${PORT}`);
+  console.log(
+    `WOLLACE server running on port ${PORT}`
+  );
 });
-  
+    
