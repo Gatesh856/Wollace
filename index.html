@@ -440,13 +440,14 @@ document.getElementById("paymentForm").addEventListener("submit",function(e){
   return;
  }
 
- data.payments.push({
+data.payments.push({
   id:uid(),
   customerId:id,
   amount,
+  method:"M-Pesa",
   code:code,
   date:document.getElementById("paymentDate").value
- });
+});
 
  save();
  this.reset();
